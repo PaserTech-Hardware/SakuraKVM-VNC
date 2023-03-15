@@ -60,4 +60,20 @@ void log_msg(LOG_LEVEL level, const char *module_name, const char *func_name, un
 */
 void logging_close();
 
+/*
+* Use to redirect libvncserver log function to our logging system.
+* 
+* @param format format string
+* @param ... variable arguments
+*/
+void logging_vnc_redirect_info(const char *format, ...);
+
+/*
+* Use to redirect libvncserver log function to our logging system.
+* 
+* @param format format string
+* @param ... variable arguments
+*/
+void logging_vnc_redirect_error(const char *format, ...);
+
 #endif
