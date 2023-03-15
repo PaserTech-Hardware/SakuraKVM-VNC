@@ -6,6 +6,11 @@ SOURCEDIR = src
 BUILDDIR = build
 BINDIR = bin
 
+GITVER := $(shell git describe --match=NeVeRmAtCh --always --abbrev=8 --dirty)
+ifneq ($(GITVER),)
+CFLAGS += -DSAKURAKVMD_GIT_VER=\"$(GITVER)\"
+endif
+
 EXECUTABLE = sakurakvmd
 SOURCES = $(shell find $(SOURCEDIR) -name '*.c')
 OBJECTS = $(patsubst $(SOURCEDIR)/%.c,$(BUILDDIR)/%.o,$(SOURCES))
