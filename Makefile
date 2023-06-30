@@ -1,6 +1,6 @@
 CC ?= gcc
 CFLAGS ?= -O3 -Wall -Wextra -Werror -pedantic -std=c99
-LDFLAGS ?= -lpthread -lvncserver
+LDFLAGS ?= -lpthread -lvncserver-sakura
 
 SOURCEDIR = src
 BUILDDIR = build
