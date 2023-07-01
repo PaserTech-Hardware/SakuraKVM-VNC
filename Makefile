@@ -2,6 +2,12 @@ CC ?= gcc
 CFLAGS ?= -O3 -Wall -Wextra -Werror -pedantic -std=c99
 LDFLAGS ?= -lpthread -lvncserver-sakura
 
+# this project used allwinner sunxi cedar lib: -lcdc_base -lVE -lvencoder -lMemAdapter
+# to build this project, install the cedar userspace lib first
+# link: https://github.com/aodzip/libcedarc
+
+LDFLAGS += -lcdc_base -lVE -lvencoder -lMemAdapter
+
 SOURCEDIR = src
 BUILDDIR = build
 BINDIR = bin
