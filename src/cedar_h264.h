@@ -25,6 +25,7 @@ int initH264Func(h264_func_t *h264_func, unsigned int width, unsigned int height
 void cedar_h264mode_init(VideoEncoder *pVideoEnc, unsigned int width, unsigned int height, unsigned int fps);
 int cedar_hardware_init(unsigned int width, unsigned int height, unsigned int fps);
 void cedar_hardware_deinit(void);
+int cedar_encode_get_sps_pps_buffer(char **out_buf, unsigned int *out_buf_len);
 int cedar_encode_one_frame_yuv422sp(
     char *y_buf,
     unsigned int y_buf_len, 

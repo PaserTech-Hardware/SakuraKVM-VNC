@@ -350,6 +350,22 @@ void cedar_hardware_deinit(void)
     LOGD("Sunxi Cedar deinitialization success\n");
 }
 
+int cedar_encode_get_sps_pps_buffer(char **out_buf, unsigned int *out_buf_len)
+{
+    VencHeaderData sps_pps_data;
+
+    VideoEncGetParameter(g_pVideoEnc, VENC_IndexParamH264SPSPPS, &sps_pps_data);
+    *out_buf_len = sps_pps_data.nLength;
+    *out_buf = (char *)malloc(*out_buf_len);
+    if(*out_buf == NULL)
+    {
+        LOGE("Sunxi Cedar Get SPS Data failed: malloc failed\n");
+        return -EINVAL;
+    }
+    memcpy(*out_buf, sps_pps_data.pBuffer, *out_buf_len);
+    return 0;
+}
+
 int cedar_encode_one_frame_yuv422sp(
     char *y_buf,
     unsigned int y_buf_len, 

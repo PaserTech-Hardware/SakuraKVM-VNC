@@ -111,6 +111,19 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 
     size = size; // dummy for compiler warning
 
+	if(cl->isSPS_PPS_Sent == FALSE)
+	{
+		if(cedar_encode_get_sps_pps_buffer(&cl->screen->h264Buffer, &cl->screen->h264BufferSize) != 0)
+		{
+			LOGE("cedar_encode_get_sps_pps_buffer failed");
+			return FALSE;
+		}
+		cl->isSPS_PPS_Sent = TRUE;
+		fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);
+		fflush(file_debug);
+		return TRUE;
+	}
+
     if(cedar_encode_one_frame_yuv422sp(
         g_y_buf_test, 
         1920 * 1080, 
@@ -144,6 +157,7 @@ int vncserver_init(int argc, char *argv[])
 
     rfbScreenInfoPtr screen = rfbGetScreen(&argc, argv, 1920, 1080, 8, 3, 4);
     screen->frameBuffer = (char*)malloc(1920 * 1080 * 4);
+    screen->desktopName = "SakuraKVM-VNC";
 
     SetXCursor2(screen);
     SetAlphaCursor(screen, 0);
