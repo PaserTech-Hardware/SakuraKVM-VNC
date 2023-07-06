@@ -5,6 +5,7 @@
 #include "logging.h"
 #include "vncserver.h"
 #include "cedar_h264.h"
+#include "csi_capture.h"
 
 static void SetXCursor2(rfbScreenInfoPtr rfbScreen)
 {
@@ -96,17 +97,21 @@ static void SetAlphaCursor(rfbScreenInfoPtr screen,int mode)
 	c->cleanupMask=TRUE;
 }
 
-char g_y_buf_test[1920 * 1080] = {0};
-char g_c_buf_test[1920 * 1080 / 2] = {0};
 FILE *file_debug = NULL;
-
 
 rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 {
+	char *y_buf_ptr;
+	char *c_buf_ptr;
+	unsigned int y_buf_len;
+	unsigned int c_buf_len;
+
     // todo: multi client with same framebuffer, dont encode twice
     if(buffer != NULL)
     {
         free(buffer);
+		cl->screen->h264Buffer = NULL;
+		cl->screen->h264BufferSize = 0;
     }
 
     size = size; // dummy for compiler warning
@@ -124,11 +129,17 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 		return TRUE;
 	}
 
+	if(csi_capture_frame_yuv422sp(&y_buf_ptr, &y_buf_len, &c_buf_ptr, &c_buf_len) != 0)
+	{
+		LOGE("csi_capture_frame_yuv422sp failed");
+		return FALSE;
+	}
+
     if(cedar_encode_one_frame_yuv422sp(
-        g_y_buf_test, 
-        1920 * 1080, 
-        g_c_buf_test,
-        1920 * 1080 / 2,
+        y_buf_ptr, 
+        y_buf_len, 
+        c_buf_ptr,
+        c_buf_len,
         &cl->screen->h264Buffer,
         &cl->screen->h264BufferSize
         ) != 0)
@@ -136,6 +147,12 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
         LOGE("cedar_encode_one_frame_yuv422sp failed");
         return FALSE;
     }
+
+	if(csi_capture_queuebuf_again())
+	{
+		LOGE("csi_capture_queuebuf_again failed");
+		return FALSE;
+	}
 
 	fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);
 	fflush(file_debug);
@@ -155,6 +172,11 @@ int vncserver_init(int argc, char *argv[])
     LOGD("Initalizing Sunxi Cedar hardware encoder...");
     cedar_hardware_init(1920, 1080, 30);
 
+	LOGD("Initalizing Sunxi CSI capture...");
+	csi_capture_init(1920, 1080);
+	csi_capture_queuebuf();
+	csi_capture_start();
+
     rfbScreenInfoPtr screen = rfbGetScreen(&argc, argv, 1920, 1080, 8, 3, 4);
     screen->frameBuffer = (char*)malloc(1920 * 1080 * 4);
     screen->desktopName = "SakuraKVM-VNC";
@@ -166,9 +188,6 @@ int vncserver_init(int argc, char *argv[])
     screen->h264EncoderCallback = _rfbH264EncoderCallback;
     screen->h264Buffer = NULL;
     screen->h264BufferSize = 0;
-
-	memset(g_y_buf_test, 0, sizeof(g_y_buf_test));
-	memset(g_c_buf_test, 0, sizeof(g_c_buf_test));
 
 	file_debug = fopen("cedar.h264", "wb");
 	if(file_debug == NULL)
