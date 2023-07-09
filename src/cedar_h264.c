@@ -284,11 +284,11 @@ int cedar_hardware_init(unsigned int width, unsigned int height, unsigned int fp
     baseConfig.nDstWidth = width;
     baseConfig.nDstHeight = height;
 
-    // Our input format is YUV422 semi-planar (NV16) from sunxi-csi
+    // Our input format is YUV422 multi plane (YM16) from sunxi-csi
     baseConfig.eInputFormat = VENC_PIXEL_YUV422SP;
 
     bufferParam.nSizeY = baseConfig.nInputWidth*baseConfig.nInputHeight;
-    bufferParam.nSizeC = baseConfig.nInputWidth*baseConfig.nInputHeight/2;
+    bufferParam.nSizeC = baseConfig.nInputWidth*baseConfig.nInputHeight;
     bufferParam.nBufferNum = 1;
 
     g_max_nSizeY = bufferParam.nSizeY;
@@ -366,44 +366,54 @@ int cedar_encode_get_sps_pps_buffer(char **out_buf, unsigned int *out_buf_len)
     return 0;
 }
 
-int cedar_encode_one_frame_yuv422sp(
-    char *y_buf,
-    unsigned int y_buf_len, 
-    char *c_buf,
-    unsigned int c_buf_len,
-    char **out_buf,
-    unsigned int *out_buf_len)
+int cedar_get_one_alloc_input_buffer(VencInputBuffer *inputBuffer)
 {
-    VencInputBuffer inputBuffer;
-    VencOutputBuffer outputBuffer;
-
-    if(GetOneAllocInputBuffer(g_pVideoEnc, &inputBuffer) != 0)
+    if(GetOneAllocInputBuffer(g_pVideoEnc, inputBuffer) != 0)
     {
         LOGE("Sunxi Cedar encoding failed: GetOneAllocInputBuffer failed\n");
         return -EINVAL;
     }
 
-    memcpy(inputBuffer.pAddrVirY, y_buf, y_buf_len > g_max_nSizeY ? g_max_nSizeY : y_buf_len);
-    memcpy(inputBuffer.pAddrVirC, c_buf, c_buf_len > g_max_nSizeC ? g_max_nSizeC : c_buf_len);
-    inputBuffer.bEnableCorp = 0;
-    inputBuffer.sCropInfo.nLeft =  240;
-    inputBuffer.sCropInfo.nTop  =  240;
-    inputBuffer.sCropInfo.nWidth  =  240;
-    inputBuffer.sCropInfo.nHeight =  240;
+    return 0;
+}
 
-    if(FlushCacheAllocInputBuffer(g_pVideoEnc, &inputBuffer) != 0)
+int cedar_release_one_alloc_input_buffer(VencInputBuffer *inputBuffer)
+{
+    if(ReturnOneAllocInputBuffer(g_pVideoEnc, inputBuffer) != 0)
+    {
+        LOGE("Sunxi Cedar encoding failed: ReturnOneAllocInputBuffer failed\n");
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+int cedar_encode_one_frame_yuv422sp(
+    VencInputBuffer *inputBuffer,
+    char **out_buf,
+    unsigned int *out_buf_len)
+{
+    VencOutputBuffer outputBuffer;
+
+    inputBuffer->bEnableCorp = 0;
+    inputBuffer->sCropInfo.nLeft =  240;
+    inputBuffer->sCropInfo.nTop  =  240;
+    inputBuffer->sCropInfo.nWidth  =  240;
+    inputBuffer->sCropInfo.nHeight =  240;
+
+    if(FlushCacheAllocInputBuffer(g_pVideoEnc, inputBuffer) != 0)
     {
         LOGE("Sunxi Cedar encoding failed: FlushCacheAllocInputBuffer failed\n");
-        ReturnOneAllocInputBuffer(g_pVideoEnc, &inputBuffer);
+        ReturnOneAllocInputBuffer(g_pVideoEnc, inputBuffer);
         return -EINVAL;
     }
 
     g_pts += 1*1000/g_fps;
-    inputBuffer.nPts = g_pts;
-    if(AddOneInputBuffer(g_pVideoEnc, &inputBuffer))
+    inputBuffer->nPts = g_pts;
+    if(AddOneInputBuffer(g_pVideoEnc, inputBuffer))
     {
         LOGE("Sunxi Cedar encoding failed: AddOneInputBuffer failed\n");
-        ReturnOneAllocInputBuffer(g_pVideoEnc, &inputBuffer);
+        ReturnOneAllocInputBuffer(g_pVideoEnc, inputBuffer);
         return -EINVAL;
     }
 
@@ -411,18 +421,18 @@ int cedar_encode_one_frame_yuv422sp(
     if((ret = VideoEncodeOneFrame(g_pVideoEnc)) != 0)
     {
         LOGE("Sunxi Cedar encoding failed: VideoEncodeOneFrame failed: %d\n", ret);
-        ReturnOneAllocInputBuffer(g_pVideoEnc, &inputBuffer);
+        ReturnOneAllocInputBuffer(g_pVideoEnc, inputBuffer);
         return -EINVAL;
     }
 
-    if(AlreadyUsedInputBuffer(g_pVideoEnc, &inputBuffer) != 0)
+    if(AlreadyUsedInputBuffer(g_pVideoEnc, inputBuffer) != 0)
     {
         LOGE("Sunxi Cedar encoding failed: AlreadyUsedInputBuffer failed\n");
-        ReturnOneAllocInputBuffer(g_pVideoEnc, &inputBuffer);
+        ReturnOneAllocInputBuffer(g_pVideoEnc, inputBuffer);
         return -EINVAL;
     }
 
-    if(ReturnOneAllocInputBuffer(g_pVideoEnc, &inputBuffer) != 0)
+    if(ReturnOneAllocInputBuffer(g_pVideoEnc, inputBuffer) != 0)
     {
         LOGE("Sunxi Cedar encoding failed: ReturnOneAllocInputBuffer failed\n");
         return -EINVAL;

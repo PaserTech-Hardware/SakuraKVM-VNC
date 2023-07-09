@@ -26,11 +26,10 @@ void cedar_h264mode_init(VideoEncoder *pVideoEnc, unsigned int width, unsigned i
 int cedar_hardware_init(unsigned int width, unsigned int height, unsigned int fps);
 void cedar_hardware_deinit(void);
 int cedar_encode_get_sps_pps_buffer(char **out_buf, unsigned int *out_buf_len);
+int cedar_get_one_alloc_input_buffer(VencInputBuffer *inputBuffer);
+int cedar_release_one_alloc_input_buffer(VencInputBuffer *inputBuffer);
 int cedar_encode_one_frame_yuv422sp(
-    char *y_buf,
-    unsigned int y_buf_len, 
-    char *c_buf,
-    unsigned int c_buf_len,
+    VencInputBuffer *inputBuffer,
     char **out_buf,
     unsigned int *out_buf_len);
 
