@@ -180,10 +180,10 @@ int initH264Func(h264_func_t *h264_func, unsigned int width, unsigned int height
 
     //init h264Param
     h264_func->h264Param.bEntropyCodingCABAC = 1;
-    h264_func->h264Param.nBitrate = 10*1024*1024;
+    h264_func->h264Param.nBitrate = 20*1024*1024;
     h264_func->h264Param.nFramerate = fps;
     h264_func->h264Param.nCodingMode = VENC_FRAME_CODING;
-    h264_func->h264Param.nMaxKeyInterval = 30;
+    h264_func->h264Param.nMaxKeyInterval = 120;
     h264_func->h264Param.sProfileLevel.nProfile = VENC_H264ProfileHigh;
     h264_func->h264Param.sProfileLevel.nLevel = VENC_H264Level51;
     h264_func->h264Param.sQPRange.nMinqp = 10;
@@ -289,7 +289,7 @@ int cedar_hardware_init(unsigned int width, unsigned int height, unsigned int fp
 
     bufferParam.nSizeY = baseConfig.nInputWidth*baseConfig.nInputHeight;
     bufferParam.nSizeC = baseConfig.nInputWidth*baseConfig.nInputHeight;
-    bufferParam.nBufferNum = 1;
+    bufferParam.nBufferNum = 3;
 
     g_max_nSizeY = bufferParam.nSizeY;
     g_max_nSizeC = bufferParam.nSizeC;
@@ -468,4 +468,9 @@ int cedar_encode_one_frame_yuv422sp(
     }
 
     return 0;
+}
+
+int cedar_get_dmabuf_fd(char *buffer_virtaddr)
+{
+    return g_videoEncMemOps->get_dma_buf_fd(buffer_virtaddr);
 }

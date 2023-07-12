@@ -5,7 +5,7 @@
 int main(int argc, char *argv[])
 {
     int ret;
-    ret = logging_init(LOG_LEVEL_VERBOSE);
+    ret = logging_init(LOG_LEVEL_DEBUG);
     if(ret)
         return ret;
     

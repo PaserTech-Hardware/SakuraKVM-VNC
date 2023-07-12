@@ -32,5 +32,6 @@ int cedar_encode_one_frame_yuv422sp(
     VencInputBuffer *inputBuffer,
     char **out_buf,
     unsigned int *out_buf_len);
+int cedar_get_dmabuf_fd(char *buffer_virtaddr);
 
 #endif

@@ -23,7 +23,6 @@ static int g_videodev_fd;
 
 struct v4l2_buffer g_v4l2_buf[3] = {0};
 struct v4l2_plane g_v4l2_planes_buffer[3][3];
-char *g_v4l2_data_buffer[3][3];
 
 struct v4l2_buffer g_buf;
 struct v4l2_plane g_tmp_plane[3];
@@ -170,9 +169,9 @@ int csi_capture_init(unsigned int width, unsigned int height)
     }
 
     // Now request the buffer
-    req.count = 1;
+    req.count = 3;
     req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    req.memory = V4L2_MEMORY_USERPTR;
+    req.memory = V4L2_MEMORY_DMABUF;
 
     if (0 != xioctl(g_videodev_fd, VIDIOC_REQBUFS, &req))
     {
@@ -186,7 +185,7 @@ int csi_capture_init(unsigned int width, unsigned int height)
     memset(g_v4l2_planes_buffer, 0, sizeof(g_v4l2_planes_buffer));
     for(i = 0; i < req_count; i++) {
         g_v4l2_buf[i].type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-        g_v4l2_buf[i].memory = V4L2_MEMORY_USERPTR;
+        g_v4l2_buf[i].memory = V4L2_MEMORY_DMABUF;
         g_v4l2_buf[i].m.planes = g_v4l2_planes_buffer[i];
         g_v4l2_buf[i].length = fmt.fmt.pix_mp.num_planes;
         g_v4l2_buf[i].index = i;
@@ -202,7 +201,7 @@ int csi_capture_init(unsigned int width, unsigned int height)
     return 0;
 }
 
-int csi_capture_queuebuf(char ***buffer)
+int csi_capture_queuebuf(int **buffer)
 {
     int i, j;
 
@@ -210,17 +209,17 @@ int csi_capture_queuebuf(char ***buffer)
     for (i = 0; i < req_count; i++) {
 
         g_v4l2_buf[i].type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-        g_v4l2_buf[i].memory = V4L2_MEMORY_USERPTR;
+        g_v4l2_buf[i].memory = V4L2_MEMORY_DMABUF;
         g_v4l2_buf[i].length = g_num_plane;
         g_v4l2_buf[i].index = i;
         g_v4l2_buf[i].m.planes = g_v4l2_planes_buffer[i];
 
         for (j = 0; j < g_num_plane; j++) {
-            g_v4l2_buf[i].m.planes[j].m.userptr = (unsigned long)buffer[i][j];
+            g_v4l2_buf[i].m.planes[j].m.fd = buffer[i][j];
             g_v4l2_buf[i].m.planes[j].length = g_v4l2_planes_buffer[i][j].length;
             g_v4l2_buf[i].m.planes[j].bytesused = 0;
 
-            LOGD("csi: queue buf, plane[%d] userptr = %p, length = %d", j, g_v4l2_buf[i].m.planes[j].m.userptr, g_v4l2_planes_buffer[i][j].length);
+            LOGD("csi: queue buf, plane[%d] fd = %d, length = %d", j, g_v4l2_buf[i].m.planes[j].m.fd, g_v4l2_planes_buffer[i][j].length);
         }
 
         LOGD("csi: queue buffer req %d", i);
@@ -270,7 +269,7 @@ int csi_capture_frame_yuv422sp(int *buf_id)
 	LOGD("csi capture: retrieving frame...");
     memset(&g_buf, 0, sizeof(g_buf));
     g_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    g_buf.memory = V4L2_MEMORY_USERPTR;
+    g_buf.memory = V4L2_MEMORY_DMABUF;
     g_buf.m.planes = g_tmp_plane;
     g_buf.length = g_num_plane;
     if(0 != xioctl(g_videodev_fd, VIDIOC_DQBUF, &g_buf))
@@ -281,31 +280,16 @@ int csi_capture_frame_yuv422sp(int *buf_id)
     *buf_id = g_buf.index;
 	LOGD("csi capture: retrieved frame");
 
-    LOGD("after plane[%d] start = %p, bytesused = %d\n", 0, g_v4l2_data_buffer[g_buf.index][0], g_tmp_plane[0].bytesused);
-    LOGD("after plane[%d] start = %p, bytesused = %d\n", 1, g_v4l2_data_buffer[g_buf.index][1], g_tmp_plane[1].bytesused);
-
-    //debug
-    static int frame_count = 0;
-    if(frame_count == 0)
-    {
-        FILE *file_debug = fopen("test.yuv", "wb+");
-        fwrite(g_v4l2_data_buffer[g_buf.index][0], 1, g_tmp_plane[0].bytesused, file_debug);
-        fwrite(g_v4l2_data_buffer[g_buf.index][1], 1, g_tmp_plane[1].bytesused, file_debug);
-        fflush(file_debug);
-        fclose(file_debug);
-        frame_count = 1;
-    }
-
     return 0;
 }
 
-int csi_capture_queuebuf_again(char **buffer)
+int csi_capture_queuebuf_again(int *buffer)
 {
     int i;
 
     for(i = 0; i < g_num_plane; i++)
     {
-        g_buf.m.planes[i].m.userptr = (unsigned long)buffer[i];
+        g_buf.m.planes[i].m.fd = buffer[i];
         g_buf.m.planes[i].length = g_v4l2_planes_buffer[g_buf.index][i].length;
         g_buf.m.planes[i].bytesused = 0;
     }
