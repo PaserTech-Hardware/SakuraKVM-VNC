@@ -105,6 +105,8 @@ FILE *file_debug = NULL;
 rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 {
 	int buf_id, i;
+	char *sps_head_buffer;
+	unsigned int sps_head_buffer_size;
 
     // todo: multi client with same framebuffer, dont encode twice
     if(buffer != NULL)
@@ -115,19 +117,6 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
     }
 
     size = size; // dummy for compiler warning
-
-	if(cl->isSPS_PPS_Sent == FALSE)
-	{
-		if(cedar_encode_get_sps_pps_buffer(&cl->screen->h264Buffer, &cl->screen->h264BufferSize) != 0)
-		{
-			LOGE("cedar_encode_get_sps_pps_buffer failed");
-			return FALSE;
-		}
-		cl->isSPS_PPS_Sent = TRUE;
-		fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);
-		fflush(file_debug);
-		return TRUE;
-	}
 
 	if(csi_capture_frame_yuv422sp(&buf_id) != 0)
 	{
@@ -172,6 +161,29 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 	{
 		LOGE("csi_capture_queuebuf_again failed");
 		return FALSE;
+	}
+
+	if(cl->isSPS_PPS_Sent == FALSE)
+	{
+		if(cedar_encode_get_sps_pps_buffer(&sps_head_buffer, &sps_head_buffer_size) != 0)
+		{
+			LOGE("cedar_encode_get_sps_pps_buffer failed");
+			return FALSE;
+		}
+		sps_head_buffer = realloc(sps_head_buffer, sps_head_buffer_size + cl->screen->h264BufferSize);
+		if(!sps_head_buffer)
+		{
+			LOGE("realloc sps_head_buffer failed");
+			return FALSE;
+		}
+		memcpy(sps_head_buffer + sps_head_buffer_size, cl->screen->h264Buffer, cl->screen->h264BufferSize);
+		free(cl->screen->h264Buffer);
+		cl->screen->h264Buffer = sps_head_buffer;
+		cl->screen->h264BufferSize += sps_head_buffer_size;
+		cl->isSPS_PPS_Sent = TRUE;
+		fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);
+		fflush(file_debug);
+		return TRUE;
 	}
 
 	fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);

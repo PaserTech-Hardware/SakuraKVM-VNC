@@ -108,7 +108,7 @@ void init_intra_refresh(VencCyclicIntraRefresh *sIntraRefresh)
 
 void init_roi(VencROIConfig *sRoiConfig)
 {
-    sRoiConfig[0].bEnable = 1;
+    sRoiConfig[0].bEnable = 0;
     sRoiConfig[0].index = 0;
     sRoiConfig[0].nQPoffset = 10;
     sRoiConfig[0].sRect.nLeft = 0;
@@ -116,7 +116,7 @@ void init_roi(VencROIConfig *sRoiConfig)
     sRoiConfig[0].sRect.nWidth = 1280;
     sRoiConfig[0].sRect.nHeight = 320;
 
-    sRoiConfig[1].bEnable = 1;
+    sRoiConfig[1].bEnable = 0;
     sRoiConfig[1].index = 1;
     sRoiConfig[1].nQPoffset = 10;
     sRoiConfig[1].sRect.nLeft = 320;
@@ -124,7 +124,7 @@ void init_roi(VencROIConfig *sRoiConfig)
     sRoiConfig[1].sRect.nWidth = 320;
     sRoiConfig[1].sRect.nHeight = 180;
 
-    sRoiConfig[2].bEnable = 1;
+    sRoiConfig[2].bEnable = 0;
     sRoiConfig[2].index = 2;
     sRoiConfig[2].nQPoffset = 10;
     sRoiConfig[2].sRect.nLeft = 320;
@@ -132,7 +132,7 @@ void init_roi(VencROIConfig *sRoiConfig)
     sRoiConfig[2].sRect.nWidth = 320;
     sRoiConfig[2].sRect.nHeight = 180;
 
-    sRoiConfig[3].bEnable = 1;
+    sRoiConfig[3].bEnable = 0;
     sRoiConfig[3].index = 3;
     sRoiConfig[3].nQPoffset = 10;
     sRoiConfig[3].sRect.nLeft = 320;
@@ -144,12 +144,12 @@ void init_roi(VencROIConfig *sRoiConfig)
 void init_alter_frame_rate_info(VencAlterFrameRateInfo *pAlterFrameRateInfo)
 {
     memset(pAlterFrameRateInfo, 0 , sizeof(VencAlterFrameRateInfo));
-    pAlterFrameRateInfo->bEnable = 1;
+    pAlterFrameRateInfo->bEnable = 0;
     pAlterFrameRateInfo->bUseUserSetRoiInfo = 1;
     pAlterFrameRateInfo->sRoiBgFrameRate.nSrcFrameRate = 25;
     pAlterFrameRateInfo->sRoiBgFrameRate.nDstFrameRate = 5;
 
-    pAlterFrameRateInfo->roi_param[0].bEnable = 1;
+    pAlterFrameRateInfo->roi_param[0].bEnable = 0;
     pAlterFrameRateInfo->roi_param[0].index = 0;
     pAlterFrameRateInfo->roi_param[0].nQPoffset = 10;
     pAlterFrameRateInfo->roi_param[0].roi_abs_flag = 1;
@@ -158,7 +158,7 @@ void init_alter_frame_rate_info(VencAlterFrameRateInfo *pAlterFrameRateInfo)
     pAlterFrameRateInfo->roi_param[0].sRect.nWidth = 320;
     pAlterFrameRateInfo->roi_param[0].sRect.nHeight = 320;
 
-    pAlterFrameRateInfo->roi_param[1].bEnable = 1;
+    pAlterFrameRateInfo->roi_param[1].bEnable = 0;
     pAlterFrameRateInfo->roi_param[1].index = 0;
     pAlterFrameRateInfo->roi_param[1].nQPoffset = 10;
     pAlterFrameRateInfo->roi_param[1].roi_abs_flag = 1;
@@ -180,7 +180,7 @@ int initH264Func(h264_func_t *h264_func, unsigned int width, unsigned int height
 
     //init h264Param
     h264_func->h264Param.bEntropyCodingCABAC = 1;
-    h264_func->h264Param.nBitrate = 20*1024*1024;
+    h264_func->h264Param.nBitrate = 20*1024*1024*8;
     h264_func->h264Param.nFramerate = fps;
     h264_func->h264Param.nCodingMode = VENC_FRAME_CODING;
     h264_func->h264Param.nMaxKeyInterval = 120;
@@ -188,7 +188,7 @@ int initH264Func(h264_func_t *h264_func, unsigned int width, unsigned int height
     h264_func->h264Param.sProfileLevel.nLevel = VENC_H264Level51;
     h264_func->h264Param.sQPRange.nMinqp = 10;
     h264_func->h264Param.sQPRange.nMaxqp = 50;
-    h264_func->h264Param.bLongRefEnable = 1;
+    h264_func->h264Param.bLongRefEnable = 0;
     h264_func->h264Param.nLongRefPoc = 0;
 
 #if 1
