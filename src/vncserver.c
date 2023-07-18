@@ -181,13 +181,17 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 		cl->screen->h264Buffer = sps_head_buffer;
 		cl->screen->h264BufferSize += sps_head_buffer_size;
 		cl->isSPS_PPS_Sent = TRUE;
+		/*
 		fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);
 		fflush(file_debug);
+		*/
 		return TRUE;
 	}
 
+	/*
 	fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);
 	fflush(file_debug);
+	*/
 
     return TRUE;
 }

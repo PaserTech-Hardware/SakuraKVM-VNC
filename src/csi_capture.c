@@ -253,7 +253,7 @@ int csi_capture_frame_yuv422sp(int *buf_id)
     FD_SET(g_videodev_fd, &fds);
     struct timeval tv = {5, 0};
 
-    LOGD("csi capture: waiting for frame...");
+    LOGV("csi capture: waiting for frame...");
     int r = select(g_videodev_fd+1, &fds, NULL, NULL, &tv);
     if(r < 0)
     {
@@ -266,7 +266,7 @@ int csi_capture_frame_yuv422sp(int *buf_id)
 		return -ETIMEDOUT;
 	}
 
-	LOGD("csi capture: retrieving frame...");
+	LOGV("csi capture: retrieving frame...");
     memset(&g_buf, 0, sizeof(g_buf));
     g_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     g_buf.memory = V4L2_MEMORY_DMABUF;
@@ -278,7 +278,7 @@ int csi_capture_frame_yuv422sp(int *buf_id)
         return -EINVAL;
 	}
     *buf_id = g_buf.index;
-	LOGD("csi capture: retrieved frame");
+	LOGV("csi capture: retrieved frame");
 
     return 0;
 }
