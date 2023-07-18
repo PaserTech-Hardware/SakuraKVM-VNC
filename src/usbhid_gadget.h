@@ -1,0 +1,8 @@
+#ifndef __SAKURAKVMD_USBHID_GADGET_H__
+#define __SAKURAKVMD_USBHID_GADGET_H__
+
+#define KEY_REPORT_LENGTH 8
+
+#define HID_REPORT_RETRY_MAX 5
+
+#endif
