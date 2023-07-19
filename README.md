@@ -59,7 +59,7 @@ so it's not a GPL compatible problem.
 Thanks everyone who helped with this project (in no particular order):
  - [libvncserver](https://github.com/LibVNC/libvncserver), the original libvncserver project, provide a great VNC server library.
  - [ssp97](https://github.com/ssp97), helped a lot with cedar video engine, android ion driver, etc.
- - [aodzip](https://github.com/aodzip/libcedarc), provided a great libcedarc library.
+ - [aodzip](https://github.com/aodzip/libcedarc), provided a allwinner libcedarc library.
  - [TheSnowfield](https://github.com/TheSnowfield), helped a lot with the VNC protocol, hardware design, testing, etc.
  - ... And many others who helped with this project, but does not want to show their name here.
  - ... And ***YOU*** ❤, use this project, star this project, or even contribute to this project, all of these are the best support for us.
