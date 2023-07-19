@@ -181,6 +181,12 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 		cl->screen->h264Buffer = sps_head_buffer;
 		cl->screen->h264BufferSize += sps_head_buffer_size;
 		cl->isSPS_PPS_Sent = TRUE;
+
+		// fixme: WTF why does this makes decoder output imdeiately without 16 frames delay?
+		// NAL Header: 00 00 00 01 -> 4 bytes
+		// SPS Header: ?? ?? XX ?? -> offset 3 which used for "level"
+		cl->screen->h264Buffer[7] = 30;
+		
 		/*
 		fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);
 		fflush(file_debug);
