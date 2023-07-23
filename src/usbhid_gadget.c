@@ -2,6 +2,7 @@
 #include <string.h>
 #include <err.h>
 #include <errno.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <rfb/rfb.h>
 #include <rfb/keysym.h>
@@ -27,11 +28,12 @@ static const uint8_t g_const_metaAltMap[NUM_MODIFIER_BITS] = {
 };
 
 int g_keyboard_gadget_fd = -1;
+int g_mouse_gadget_fd = -1;
 
 int usbhid_gadget_keyboard_init(void)
 {
     LOGI("Trying to open USB HID Gadget Keyboard...");
-    g_keyboard_gadget_fd = open("/dev/hidg0", O_RDWR);
+    g_keyboard_gadget_fd = open("/dev/hidg0", O_RDWR | O_NONBLOCK);
     if (g_keyboard_gadget_fd < 0)
     {
         LOGE("Failed to open USB HID Gadget Keyboard");
@@ -49,6 +51,30 @@ void usbhid_gadget_keyboard_close(void)
         close(g_keyboard_gadget_fd);
         g_keyboard_gadget_fd = -1;
         LOGI("USB HID Gadget Keyboard closed");
+    }
+}
+
+int usbhid_gadget_mouse_init(void)
+{
+    LOGI("Trying to open USB HID Gadget Mouse...");
+    g_mouse_gadget_fd = open("/dev/hidg1", O_RDWR | O_NONBLOCK);
+    if (g_mouse_gadget_fd < 0)
+    {
+        LOGE("Failed to open USB HID Gadget Mouse");
+        return -1;
+    }
+    LOGI("USB HID Gadget Mouse opened");
+    return 0;
+}
+
+void usbhid_gadget_mouse_close(void)
+{
+    if (g_mouse_gadget_fd >= 0)
+    {
+        LOGI("Closing USB HID Gadget Mouse...");
+        close(g_mouse_gadget_fd);
+        g_mouse_gadget_fd = -1;
+        LOGI("USB HID Gadget Mouse closed");
     }
 }
 
@@ -78,6 +104,35 @@ int usbhid_gadget_write_keyboard(const char *report)
     }
     
     LOGE("USB HID Gadget Keyboard write failed, errno: %d, %s", errno, strerror(errno));
+    return -EIO;
+}
+
+int usbhid_gadget_write_mouse(const char *report)
+{
+    unsigned int retry_count = HID_REPORT_RETRY_MAX;
+    ssize_t ret;
+
+    while(retry_count > 0)
+    {
+        ret = write(g_mouse_gadget_fd, report, PTR_REPORT_LENGTH);
+        if (ret == PTR_REPORT_LENGTH)
+        {
+            LOGV("USB HID Gadget Mouse write success");
+            return 0;
+        }
+
+        if(errno == EAGAIN || errno == ESHUTDOWN)
+        {
+            retry_count--;
+            LOGV("USB HID Gadget Mouse write needs retry, left retry count: %d", retry_count);
+            continue;
+        }
+
+        // other errors, just break and no need for retry
+        break;
+    }
+    
+    LOGE("USB HID Gadget Mouse write failed, errno: %d, %s", errno, strerror(errno));
     return -EIO;
 }
 
@@ -396,4 +451,52 @@ void rfb_key_event_handler(rfbBool down, rfbKeySym key, rfbClientPtr cl)
     {
         usbhid_gadget_write_keyboard((const char *)clientdata->keyboardReport);
     }
+}
+
+void rfb_mouse_event_handler(int buttonMask, int x, int y, rfbClientPtr cl)
+{
+    sakuravnc_clientdata *clientdata = (sakuravnc_clientdata *)cl->clientData;
+
+    if(g_mouse_gadget_fd < 0)
+    {
+        LOGV("USB HID Gadget Mouse not opened");
+        return;
+    }
+
+    if (buttonMask > 4)
+    {
+        clientdata->pointerReport[0] = 0;
+        if (buttonMask == 8)
+        {
+            clientdata->pointerReport[5] = 1;
+        }
+        else if (buttonMask == 16)
+        {
+            clientdata->pointerReport[5] = 0xff;
+        }
+    }
+    else
+    {
+        clientdata->pointerReport[0] = ((buttonMask & 0x4) >> 1) |
+                                  ((buttonMask & 0x2) << 1) |
+                                  (buttonMask & 0x1);
+        clientdata->pointerReport[5] = 0;
+    }
+
+    if (x >= 0 && x < cl->screen->width)
+    {
+        uint16_t xx = (uint16_t)(x * (SHRT_MAX + 1) / cl->screen->width);
+
+        memcpy(&clientdata->pointerReport[1], &xx, 2);
+    }
+
+    if (y >= 0 && y < cl->screen->height)
+    {
+        uint16_t yy = (uint16_t)(y * (SHRT_MAX + 1) / cl->screen->height);
+
+        memcpy(&clientdata->pointerReport[3], &yy, 2);
+    }
+
+    rfbDefaultPtrAddEvent(buttonMask, x, y, cl);
+    usbhid_gadget_write_mouse((const char *)clientdata->pointerReport);
 }

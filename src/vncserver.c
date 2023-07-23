@@ -257,6 +257,9 @@ int vncserver_init(int argc, char *argv[])
 	LOGD("Initalizing USB HID keyboard gadget...");
 	usbhid_gadget_keyboard_init();
 
+	LOGD("Initalizing USB HID mouse gadget...");
+	usbhid_gadget_mouse_init();
+
     LOGD("Initalizing Sunxi Cedar hardware encoder...");
     cedar_hardware_init(1920, 1080, 30);
 
@@ -324,6 +327,7 @@ int vncserver_init(int argc, char *argv[])
     screen->h264BufferSize = 0;
 
 	screen->kbdAddEvent = rfb_key_event_handler;
+	screen->ptrAddEvent = rfb_mouse_event_handler;
 	screen->newClientHook = vncserver_new_client;
 
 	file_debug = fopen("cedar.h264", "wb");
