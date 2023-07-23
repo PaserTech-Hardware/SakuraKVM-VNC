@@ -6,8 +6,25 @@
 #include <rfb/rfb.h>
 #include <rfb/keysym.h>
 #include "logging.h"
+#include "list.h"
 #include "usbhid_scancodes.h"
 #include "usbhid_gadget.h"
+#include "vncserver_types.h"
+
+/* @brief HID modifier bits mapped to shift and control key codes */
+static const uint8_t g_const_shiftCtrlMap[NUM_MODIFIER_BITS] = {
+    0x02, // left shift
+    0x20, // right shift
+    0x01, // left control
+    0x10  // right control
+};
+/* @brief HID modifier bits mapped to meta and alt key codes */
+static const uint8_t g_const_metaAltMap[NUM_MODIFIER_BITS] = {
+    0x08, // left meta
+    0x80, // right meta
+    0x04, // left alt
+    0x40  // right alt
+};
 
 int g_keyboard_gadget_fd = -1;
 
@@ -62,6 +79,22 @@ int usbhid_gadget_write_keyboard(const char *report)
     
     LOGE("USB HID Gadget Keyboard write failed, errno: %d, %s", errno, strerror(errno));
     return -EIO;
+}
+
+unsigned char rfb_key_to_gadget_modifier(rfbKeySym key)
+{
+    unsigned char mod = 0;
+
+    if (key >= XK_Shift_L && key <= XK_Control_R)
+    {
+        mod = g_const_shiftCtrlMap[key - XK_Shift_L];
+    }
+    else if (key >= XK_Meta_L && key <= XK_Alt_R)
+    {
+        mod = g_const_metaAltMap[key - XK_Meta_L];
+    }
+
+    return mod;
 }
 
 unsigned char rfb_key_to_gadget_scancode(rfbKeySym key)
@@ -269,9 +302,98 @@ unsigned char rfb_key_to_gadget_scancode(rfbKeySym key)
     return scancode;
 }
 
-/*
 void rfb_key_event_handler(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 {
+    sakuravnc_clientdata *clientdata = (sakuravnc_clientdata *)cl->clientData;
+    list_node_t *keysdown_list = clientdata->keysdown_list->head;
+    list_node_t *keysdown_list_find;
+    gadget_keyscan_item keyscan_item;
+    int sendKeyboard = 0;
+    unsigned char scancode;
+    unsigned char modifier;
+    unsigned int i;
 
+    if(g_keyboard_gadget_fd < 0)
+    {
+        LOGV("USB HID Gadget Keyboard not opened");
+        return;
+    }
+
+    if(down)
+    {
+        scancode = rfb_key_to_gadget_scancode(key);
+
+        if(scancode)
+        {
+            for(keysdown_list_find = keysdown_list; keysdown_list_find != NULL; keysdown_list_find = keysdown_list_find->next)
+            {
+                if(((gadget_keyscan_item *)keysdown_list_find->data)->rfbkey == key)
+                {
+                    LOGV("Key %d already down", scancode);
+                    break;
+                }
+            }
+
+            if(keysdown_list_find == NULL)
+            {
+                LOGV("Key %d down", scancode);
+                for(i = 2; i < KEY_REPORT_LENGTH; i ++)
+                {
+                    if(!clientdata->keyboardReport[i])
+                    {
+                        keyscan_item.rfbkey = key;
+                        keyscan_item.scancode = scancode;
+                        keyscan_item.reportpos = i;
+                        list_put(clientdata->keysdown_list, &keyscan_item, sizeof(gadget_keyscan_item), NULL);
+                        clientdata->keyboardReport[i] = scancode;
+                        sendKeyboard = 1;
+                        break;
+                    }
+                }
+            }
+        }
+        else
+        {
+            modifier = rfb_key_to_gadget_modifier(key);
+
+            if(modifier)
+            {
+                clientdata->keyboardReport[0] |= modifier;
+                sendKeyboard = 1;
+            }
+        }
+    }
+    else
+    {
+        for(keysdown_list_find = keysdown_list; keysdown_list_find != NULL; keysdown_list_find = keysdown_list_find->next)
+        {
+            if(((gadget_keyscan_item *)keysdown_list_find->data)->rfbkey == key)
+            {
+                break;
+            }
+        }
+
+        if(keysdown_list_find != NULL)
+        {
+            LOGV("Key %d up", ((gadget_keyscan_item *)keysdown_list_find->data)->scancode);
+            clientdata->keyboardReport[((gadget_keyscan_item *)keysdown_list_find->data)->reportpos] = 0;
+            list_delete(clientdata->keysdown_list, keysdown_list_find);
+            sendKeyboard = 1;
+        }
+        else
+        {
+            modifier = rfb_key_to_gadget_modifier(key);
+
+            if(modifier)
+            {
+                clientdata->keyboardReport[0] &= ~modifier;
+                sendKeyboard = 1;
+            }
+        }
+    }
+
+    if(sendKeyboard)
+    {
+        usbhid_gadget_write_keyboard((const char *)clientdata->keyboardReport);
+    }
 }
-*/

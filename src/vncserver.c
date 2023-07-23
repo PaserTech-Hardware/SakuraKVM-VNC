@@ -2,10 +2,12 @@
 #include <vencoder.h>
 #include <memoryAdapter.h>
 #include <errno.h>
+#include "vncserver_types.h"
 #include "logging.h"
 #include "vncserver.h"
 #include "cedar_h264.h"
 #include "csi_capture.h"
+#include "usbhid_gadget.h"
 
 VencInputBuffer *g_requestbuf = NULL;
 int **g_cedarVirtBufferFd = NULL;
@@ -202,6 +204,45 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
     return TRUE;
 }
 
+void vncserver_client_gone(rfbClientPtr cl)
+{
+	LOGV("Client %s gone", cl->host);
+
+	if(!cl->clientData)
+		return;
+
+    if(sakuravnc_clientdata_destroy(cl->clientData) != 0)
+	{
+		LOGW("Cannot destroy client data %d: %s, memory leak will cause!", errno, strerror(errno));
+	}
+
+	free(cl->clientData);
+	cl->clientData = NULL;
+}
+
+enum rfbNewClientAction vncserver_new_client(rfbClientPtr cl)
+{
+	LOGV("New client connected from %s", cl->host);
+
+	cl->clientGoneHook = vncserver_client_gone;
+	cl->clientData = malloc(sizeof(sakuravnc_clientdata));
+	if(!cl->clientData)
+	{
+		LOGE("Cannot allocate memory for client data");
+		return RFB_CLIENT_REFUSE;
+	}
+
+	if(sakuravnc_clientdata_create(cl->clientData) != 0)
+	{
+		LOGE("Cannot initalize client data %d: %s", errno, strerror(errno));
+		free(cl->clientData);
+		cl->clientData = NULL;
+		return RFB_CLIENT_REFUSE;
+	}
+
+	return RFB_CLIENT_ACCEPT;
+}
+
 int vncserver_init(int argc, char *argv[])
 {
     int req_cnt, plane_num, i, j;
@@ -212,6 +253,9 @@ int vncserver_init(int argc, char *argv[])
     rfbErr = logging_vnc_redirect_error;
 
     LOGD("Redirected libvncserver log functions");
+
+	LOGD("Initalizing USB HID keyboard gadget...");
+	usbhid_gadget_keyboard_init();
 
     LOGD("Initalizing Sunxi Cedar hardware encoder...");
     cedar_hardware_init(1920, 1080, 30);
@@ -278,6 +322,9 @@ int vncserver_init(int argc, char *argv[])
     screen->h264EncoderCallback = _rfbH264EncoderCallback;
     screen->h264Buffer = NULL;
     screen->h264BufferSize = 0;
+
+	screen->kbdAddEvent = rfb_key_event_handler;
+	screen->newClientHook = vncserver_new_client;
 
 	file_debug = fopen("cedar.h264", "wb");
 	if(file_debug == NULL)
