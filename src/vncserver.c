@@ -8,6 +8,7 @@
 #include "cedar_h264.h"
 #include "csi_capture.h"
 #include "usbhid_gadget.h"
+#include "usbhid_message_queue.h"
 
 VencInputBuffer *g_requestbuf = NULL;
 int **g_cedarVirtBufferFd = NULL;
@@ -253,6 +254,9 @@ int vncserver_init(int argc, char *argv[])
     rfbErr = logging_vnc_redirect_error;
 
     LOGD("Redirected libvncserver log functions");
+
+	LOGD("Initalizing USB HID gadget message queue...");
+	usbhid_message_consume_thread_init();
 
 	LOGD("Initalizing USB HID keyboard gadget...");
 	usbhid_gadget_keyboard_init();

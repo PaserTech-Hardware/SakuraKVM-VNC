@@ -1,5 +1,5 @@
 CC ?= gcc
-CFLAGS ?= -O3 -Wall -Wextra -Werror -pedantic -std=c99
+CFLAGS ?= -O3 -Wall -Wextra -Werror -pedantic -std=gnu99
 LDFLAGS ?= -lpthread -lvncserver-sakura
 
 # this project used allwinner sunxi cedar lib: -lcdc_base -lVE -lvencoder -lMemAdapter

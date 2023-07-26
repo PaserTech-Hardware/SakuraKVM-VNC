@@ -6,10 +6,12 @@
 #include <fcntl.h>
 #include <rfb/rfb.h>
 #include <rfb/keysym.h>
+
 #include "logging.h"
 #include "list.h"
 #include "usbhid_scancodes.h"
 #include "usbhid_gadget.h"
+#include "usbhid_message_queue.h"
 #include "vncserver_types.h"
 
 /* @brief HID modifier bits mapped to shift and control key codes */
@@ -83,6 +85,12 @@ int usbhid_gadget_write_keyboard(const char *report)
     unsigned int retry_count = HID_REPORT_RETRY_MAX;
     ssize_t ret;
 
+    if(g_keyboard_gadget_fd < 0)
+    {
+        LOGV("USB HID Gadget Keyboard not opened");
+        return -EIO;
+    }
+
     while(retry_count > 0)
     {
         ret = write(g_keyboard_gadget_fd, report, KEY_REPORT_LENGTH);
@@ -96,6 +104,7 @@ int usbhid_gadget_write_keyboard(const char *report)
         {
             retry_count--;
             LOGV("USB HID Gadget Keyboard write needs retry, left retry count: %d", retry_count);
+            usleep(HID_REPORT_RETRY_INTERVAL_US);
             continue;
         }
 
@@ -112,6 +121,12 @@ int usbhid_gadget_write_mouse(const char *report)
     unsigned int retry_count = HID_REPORT_RETRY_MAX;
     ssize_t ret;
 
+    if(g_mouse_gadget_fd < 0)
+    {
+        LOGV("USB HID Gadget Mouse not opened");
+        return -EIO;
+    }
+
     while(retry_count > 0)
     {
         ret = write(g_mouse_gadget_fd, report, PTR_REPORT_LENGTH);
@@ -125,6 +140,7 @@ int usbhid_gadget_write_mouse(const char *report)
         {
             retry_count--;
             LOGV("USB HID Gadget Mouse write needs retry, left retry count: %d", retry_count);
+            usleep(HID_REPORT_RETRY_INTERVAL_US);
             continue;
         }
 
@@ -363,6 +379,7 @@ void rfb_key_event_handler(rfbBool down, rfbKeySym key, rfbClientPtr cl)
     list_node_t *keysdown_list = clientdata->keysdown_list->head;
     list_node_t *keysdown_list_find;
     gadget_keyscan_item keyscan_item;
+    usbhid_message_struct message;
     int sendKeyboard = 0;
     unsigned char scancode;
     unsigned char modifier;
@@ -449,13 +466,18 @@ void rfb_key_event_handler(rfbBool down, rfbKeySym key, rfbClientPtr cl)
 
     if(sendKeyboard)
     {
-        usbhid_gadget_write_keyboard((const char *)clientdata->keyboardReport);
+        memcpy(message._dummy.keyboard_report_buf, clientdata->keyboardReport, KEY_REPORT_LENGTH);
+        if(usbhid_message_queue_push(USBHID_MESSAGE_TYPE_KEYBOARD, &message) != 0)
+        {
+            LOGW("Failed to push USB HID Gadget Keyboard message to queue, message will be lost");
+        }
     }
 }
 
 void rfb_mouse_event_handler(int buttonMask, int x, int y, rfbClientPtr cl)
 {
     sakuravnc_clientdata *clientdata = (sakuravnc_clientdata *)cl->clientData;
+    usbhid_message_struct message;
 
     if(g_mouse_gadget_fd < 0)
     {
@@ -498,5 +520,9 @@ void rfb_mouse_event_handler(int buttonMask, int x, int y, rfbClientPtr cl)
     }
 
     rfbDefaultPtrAddEvent(buttonMask, x, y, cl);
-    usbhid_gadget_write_mouse((const char *)clientdata->pointerReport);
+    memcpy(message._dummy.mouse_report_buf, clientdata->pointerReport, PTR_REPORT_LENGTH);
+    if(usbhid_message_queue_push(USBHID_MESSAGE_TYPE_MOUSE, &message) != 0)
+    {
+        LOGW("Failed to push USB HID Gadget Mouse message to queue, message will be lost");
+    }
 }

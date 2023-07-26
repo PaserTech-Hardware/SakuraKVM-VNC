@@ -4,10 +4,7 @@
 #include <rfb/rfb.h>
 #include <rfb/keysym.h>
 
-#define NUM_MODIFIER_BITS 4
-#define KEY_REPORT_LENGTH 8
-#define PTR_REPORT_LENGTH 6
-#define HID_REPORT_RETRY_MAX 5
+#include "usbhid_gadget_defs.h"
 
 typedef struct _gadget_keyscan_item {
     rfbKeySym rfbkey;
@@ -22,5 +19,8 @@ void rfb_key_event_handler(rfbBool down, rfbKeySym key, rfbClientPtr cl);
 int usbhid_gadget_mouse_init(void);
 void usbhid_gadget_mouse_close(void);
 void rfb_mouse_event_handler(int buttonMask, int x, int y, rfbClientPtr cl);
+
+int usbhid_gadget_write_keyboard(const char *report);
+int usbhid_gadget_write_mouse(const char *report);
 
 #endif
