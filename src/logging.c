@@ -64,7 +64,7 @@ void log_msg(LOG_LEVEL level, const char *module_name, const char *func_name, un
     // console print part
     printf("%s%s[%s]%s ", log_level_to_color(level), time_str, module_name, log_level_to_prefix(level));
     vprintf(fmt, args);
-    if(g_log_level <= LOG_LEVEL_DEBUG)
+    if(level <= LOG_LEVEL_DEBUG)
         printf(" (%s:%lu)", func_name, linenumber);
     printf("\n");
     va_end(args);
@@ -77,7 +77,7 @@ void log_msg(LOG_LEVEL level, const char *module_name, const char *func_name, un
     }
     fprintf(g_log_file, "%s[%s]%s ", time_str, module_name, log_level_to_prefix(level));
     vfprintf(g_log_file, fmt, args);
-    if(g_log_level <= LOG_LEVEL_DEBUG)
+    if(level <= LOG_LEVEL_DEBUG)
         fprintf(g_log_file, " (%s:%lu)", func_name, linenumber);
     fprintf(g_log_file, "\n");
 
@@ -125,8 +125,9 @@ void logging_vnc_redirect_info(const char *format, ...)
 {
     char time_str[32];
     time_t now = 0;
+    LOG_LEVEL level = LOG_LEVEL_INFO;
 
-    if(LOG_LEVEL_INFO < g_log_level)
+    if(level < g_log_level)
     {
         return;
     }
@@ -137,9 +138,9 @@ void logging_vnc_redirect_info(const char *format, ...)
     va_list args;
     va_start(args, format);
     // console print part
-    printf("%s%s[vncserver]%s ", log_level_to_color(LOG_LEVEL_INFO), time_str, log_level_to_prefix(LOG_LEVEL_INFO));
+    printf("%s%s[vncserver]%s ", log_level_to_color(level), time_str, log_level_to_prefix(level));
     vprintf(format, args);
-    if(g_log_level <= LOG_LEVEL_DEBUG)
+    if(level <= LOG_LEVEL_DEBUG)
         printf(" (redirected from libvncserver)");
     printf("\n");
     va_end(args);
@@ -150,9 +151,9 @@ void logging_vnc_redirect_info(const char *format, ...)
     {
         goto log_end;
     }
-    fprintf(g_log_file, "%s[libvncserver]%s ", time_str, log_level_to_prefix(LOG_LEVEL_INFO));
+    fprintf(g_log_file, "%s[libvncserver]%s ", time_str, log_level_to_prefix(level));
     vfprintf(g_log_file, format, args);
-    if(g_log_level <= LOG_LEVEL_DEBUG)
+    if(level <= LOG_LEVEL_DEBUG)
         fprintf(g_log_file, " (redirected from libvncserver)");
     fprintf(g_log_file, "\n");
 
@@ -164,8 +165,9 @@ void logging_vnc_redirect_error(const char *format, ...)
 {
     char time_str[32];
     time_t now = 0;
+    LOG_LEVEL level = LOG_LEVEL_ERROR;
 
-    if(LOG_LEVEL_ERROR < g_log_level)
+    if(level < g_log_level)
     {
         return;
     }
@@ -176,9 +178,9 @@ void logging_vnc_redirect_error(const char *format, ...)
     va_list args;
     va_start(args, format);
     // console print part
-    printf("%s%s[vncserver]%s ", log_level_to_color(LOG_LEVEL_ERROR), time_str, log_level_to_prefix(LOG_LEVEL_ERROR));
+    printf("%s%s[vncserver]%s ", log_level_to_color(level), time_str, log_level_to_prefix(level));
     vprintf(format, args);
-    if(g_log_level <= LOG_LEVEL_DEBUG)
+    if(level <= LOG_LEVEL_DEBUG)
         printf(" (redirected from libvncserver)");
     printf("\n");
     va_end(args);
@@ -189,9 +191,9 @@ void logging_vnc_redirect_error(const char *format, ...)
     {
         goto log_end;
     }
-    fprintf(g_log_file, "%s[libvncserver]%s ", time_str, log_level_to_prefix(LOG_LEVEL_ERROR));
+    fprintf(g_log_file, "%s[libvncserver]%s ", time_str, log_level_to_prefix(level));
     vfprintf(g_log_file, format, args);
-    if(g_log_level <= LOG_LEVEL_DEBUG)
+    if(level <= LOG_LEVEL_DEBUG)
         fprintf(g_log_file, " (redirected from libvncserver)");
     fprintf(g_log_file, "\n");
 
