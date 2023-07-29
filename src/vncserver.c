@@ -1,17 +1,12 @@
 #include <rfb/rfb.h>
-#include <vencoder.h>
-#include <memoryAdapter.h>
 #include <errno.h>
 #include "vncserver_types.h"
 #include "logging.h"
 #include "vncserver.h"
 #include "cedar_h264.h"
-#include "csi_capture.h"
 #include "usbhid_gadget.h"
 #include "usbhid_message_queue.h"
-
-VencInputBuffer *g_requestbuf = NULL;
-int **g_cedarVirtBufferFd = NULL;
+#include "video_buf_manager.h"
 
 static void SetXCursor2(rfbScreenInfoPtr rfbScreen)
 {
@@ -107,7 +102,6 @@ FILE *file_debug = NULL;
 
 rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 {
-	int buf_id, i;
 	char *sps_head_buffer;
 	unsigned int sps_head_buffer_size;
 
@@ -121,48 +115,8 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 
     size = size; // dummy for compiler warning
 
-	if(csi_capture_frame_yuv422sp(&buf_id) != 0)
+	if(video_buf_pack_frame_data(cl->clientData, &cl->screen->h264Buffer, &cl->screen->h264BufferSize) == FALSE)
 	{
-		LOGE("csi_capture_frame_yuv422sp failed");
-		return FALSE;
-	}
-
-    if(cedar_encode_one_frame_yuv422sp(
-		&g_requestbuf[buf_id],
-        &cl->screen->h264Buffer,
-        &cl->screen->h264BufferSize
-        ) != 0)
-    {
-        LOGE("cedar_encode_one_frame_yuv422sp failed");
-        return FALSE;
-    }
-
-	if(cedar_get_one_alloc_input_buffer(&g_requestbuf[buf_id]))
-	{
-		LOGE("cedar_get_one_alloc_input_buffer failed");
-		return FALSE;
-	}
-
-	for(i = 0; i < csi_get_num_plane(); i++)
-	{
-		switch(i)
-		{
-			case 0:
-				g_cedarVirtBufferFd[buf_id][i] = cedar_get_dmabuf_fd((char*)g_requestbuf[buf_id].pAddrVirY);
-				break;
-			case 1:
-				g_cedarVirtBufferFd[buf_id][i] = cedar_get_dmabuf_fd((char*)g_requestbuf[buf_id].pAddrVirC);
-				break;
-			default:
-				LOGE("unknown plane_num %d", i);
-				cedar_release_one_alloc_input_buffer(&g_requestbuf[buf_id]);
-				return FALSE;
-		}
-	}
-
-	if(csi_capture_queuebuf_again(g_cedarVirtBufferFd[buf_id]))
-	{
-		LOGE("csi_capture_queuebuf_again failed");
 		return FALSE;
 	}
 
@@ -190,17 +144,8 @@ rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 		// SPS Header: ?? ?? XX ?? -> offset 3 which used for "level"
 		cl->screen->h264Buffer[7] = 30;
 
-		/*
-		fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);
-		fflush(file_debug);
-		*/
 		return TRUE;
 	}
-
-	/*
-	fwrite(cl->screen->h264Buffer, 1, cl->screen->h264BufferSize, file_debug);
-	fflush(file_debug);
-	*/
 
     return TRUE;
 }
@@ -245,9 +190,7 @@ enum rfbNewClientAction vncserver_new_client(rfbClientPtr cl)
 }
 
 int vncserver_init(int argc, char *argv[])
-{
-    int req_cnt, plane_num, i, j;
-	
+{	
 	LOGI("Starting VNC server...");
 
     rfbLog = logging_vnc_redirect_info;
@@ -264,59 +207,8 @@ int vncserver_init(int argc, char *argv[])
 	LOGD("Initalizing USB HID mouse gadget...");
 	usbhid_gadget_mouse_init();
 
-    LOGD("Initalizing Sunxi Cedar hardware encoder...");
-    cedar_hardware_init(1920, 1080, 30);
-
-	LOGD("Initalizing Sunxi CSI capture...");
-	csi_capture_init(1920, 1080);
-	req_cnt = csi_get_num_req();
-	plane_num = csi_get_num_plane();
-	g_requestbuf = (VencInputBuffer*)malloc(sizeof(VencInputBuffer) * req_cnt);
-	if(!g_requestbuf)
-	{
-		LOGE("malloc g_requestbuf failed");
-		return -1;
-	}
-	g_cedarVirtBufferFd = (int**)malloc(sizeof(int*) * req_cnt);
-	if(!g_cedarVirtBufferFd)
-	{
-		LOGE("malloc g_cedarVirtBufferFd failed");
-		return -1;
-	}
-	for(i = 0; i < req_cnt; i++)
-	{
-		g_cedarVirtBufferFd[i] = (int*)malloc(sizeof(int) * plane_num);
-		if(!g_cedarVirtBufferFd[i])
-		{
-			LOGE("malloc g_cedarVirtBufferFd[%d] failed", i);
-			free(g_requestbuf);
-			free(g_cedarVirtBufferFd);
-			return -1;
-		}
-		cedar_get_one_alloc_input_buffer(&g_requestbuf[i]);
-		for(j = 0; j < plane_num; j++)
-		{
-			switch(j)
-			{
-				case 0:
-					g_cedarVirtBufferFd[i][j] = cedar_get_dmabuf_fd((char*)g_requestbuf[i].pAddrVirY);
-					LOGD("cedar memory buf id %d plane %d pAddrVirY = %p, pAddrPhyY = %p, dmabuf_fd = %d", i, j, g_requestbuf[i].pAddrVirY, g_requestbuf[i].pAddrPhyY, g_cedarVirtBufferFd[i][j]);
-					break;
-				case 1:
-					g_cedarVirtBufferFd[i][j] = cedar_get_dmabuf_fd((char*)g_requestbuf[i].pAddrVirC);
-					LOGD("cedar memory buf id %d plane %d pAddrVirC = %p, pAddrPhyC = %p, dmabuf_fd = %d", i, j, g_requestbuf[i].pAddrVirC, g_requestbuf[i].pAddrPhyC, g_cedarVirtBufferFd[i][j]);
-					break;
-				default:
-					LOGE("unknown plane_num %d", j);
-					cedar_release_one_alloc_input_buffer(&g_requestbuf[i]);
-					free(g_requestbuf);
-					free(g_cedarVirtBufferFd);
-					return -1;
-			}
-		}
-	}
-	csi_capture_queuebuf(g_cedarVirtBufferFd);
-	csi_capture_start();
+	LOGD("Initalizing Video Capture Manager...");
+	video_buf_manager_init();
 
     rfbScreenInfoPtr screen = rfbGetScreen(&argc, argv, 1920, 1080, 8, 3, 4);
     screen->frameBuffer = (char*)malloc(1920 * 1080 * 4);
@@ -333,13 +225,6 @@ int vncserver_init(int argc, char *argv[])
 	screen->kbdAddEvent = rfb_key_event_handler;
 	screen->ptrAddEvent = rfb_mouse_event_handler;
 	screen->newClientHook = vncserver_new_client;
-
-	file_debug = fopen("cedar.h264", "wb");
-	if(file_debug == NULL)
-	{
-		LOGE("fopen cedar.h264 failed");
-		return -1;
-	}
 
     rfbRunEventLoop(screen, -1, FALSE);
 

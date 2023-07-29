@@ -1,6 +1,9 @@
 #ifndef __SAKURAKVMD_CEDAR_H264_H__
 #define __SAKURAKVMD_CEDAR_H264_H__
 
+#include <vencoder.h>
+#include <memoryAdapter.h>
+
 #define ROI_NUM 4
 #define ALIGN_XXB(y, x) (((x) + ((y)-1)) & ~((y)-1))
 
