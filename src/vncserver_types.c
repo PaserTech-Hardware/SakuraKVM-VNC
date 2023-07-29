@@ -22,10 +22,8 @@ int sakuravnc_clientdata_destroy(sakuravnc_clientdata *clientdata)
     ret = list_destroy(clientdata->keysdown_list);
     if(ret)
         return ret;
-    
-    pthread_mutex_lock(&g_current_key_frame_buf_mutex);
-    video_buf_dereference_key_frame(clientdata->client_key_frame_buf);
-    pthread_mutex_unlock(&g_current_key_frame_buf_mutex);
+
+    video_buf_dereference_key_frame_if_not_current(clientdata->client_key_frame_buf);
 
     return 0;
 }

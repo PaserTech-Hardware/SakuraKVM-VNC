@@ -4,13 +4,12 @@
 #include "list.h"
 #include "vncserver_types.h"
 
-extern pthread_mutex_t g_current_key_frame_buf_mutex;
-
 int video_buf_manager_init(void);
 void video_buf_manager_destory(void);
 
 void video_buf_reference_key_frame(video_key_frame_buf_t *client_key_frame_buf);
 void video_buf_dereference_key_frame(video_key_frame_buf_t *client_key_frame_buf);
+void video_buf_dereference_key_frame_if_not_current(video_key_frame_buf_t *client_key_frame_buf);
 
 /**
  * @brief This is the main function to pack frame data for every client.

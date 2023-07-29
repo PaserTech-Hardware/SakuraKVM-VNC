@@ -188,7 +188,7 @@ int video_buf_render_next_frame(void)
                 return FALSE;
             }
             break;
-        case 0x61:
+        case 0x41:
             LOGV("Encoded P frame");
             if(video_buf_handle_p_frame(encode_buf, encode_buf_size) == FALSE)
             {
@@ -255,6 +255,16 @@ void video_buf_dereference_key_frame(video_key_frame_buf_t *client_key_frame_buf
     }
 }
 
+void video_buf_dereference_key_frame_if_not_current(video_key_frame_buf_t *client_key_frame_buf)
+{
+    pthread_mutex_lock(&g_current_key_frame_buf_mutex);
+    if(client_key_frame_buf != g_current_key_frame_buf)
+    {
+        video_buf_dereference_key_frame(client_key_frame_buf);
+    }
+    pthread_mutex_unlock(&g_current_key_frame_buf_mutex);
+}
+
 int video_buf_pack_frame_data(sakuravnc_clientdata *clientdata, char **buffer, unsigned int *size)
 {
     video_key_frame_buf_t *client_key_frame_buf = clientdata->client_key_frame_buf;
@@ -287,7 +297,7 @@ int video_buf_pack_frame_data(sakuravnc_clientdata *clientdata, char **buffer, u
     else
     {
         total_frame_length = 0;
-        tmp_p_frame_node = (client_p_frame_node != NULL ? client_p_frame_node->next : NULL);
+        tmp_p_frame_node = (client_p_frame_node != NULL ? client_p_frame_node->next : client_key_frame_buf->p_frame_list->head);
     }
 
     // we need send all data in P frame list, so count the total frame length
