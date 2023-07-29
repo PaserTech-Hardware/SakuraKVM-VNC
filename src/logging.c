@@ -3,12 +3,15 @@
 #include <time.h>
 #include <string.h>
 #include <stdarg.h>
+#include <pthread.h>
 
 #include "logging.h"
 #include "sakurakvmd.h"
 
 LOG_LEVEL g_log_level = LOG_LEVEL_INFO;
 FILE *g_log_file = NULL;
+
+pthread_mutex_t g_log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 const char *log_level_to_prefix(LOG_LEVEL level)
 {
@@ -56,6 +59,8 @@ void log_msg(LOG_LEVEL level, const char *module_name, const char *func_name, un
         return;
     }
 
+    pthread_mutex_lock(&g_log_mutex);
+
     now = time(NULL);
     strftime(time_str, sizeof(time_str), LOG_TIME_FMT, localtime(&now));
 
@@ -83,6 +88,8 @@ void log_msg(LOG_LEVEL level, const char *module_name, const char *func_name, un
 
     log_end:
     va_end(args);
+
+    pthread_mutex_unlock(&g_log_mutex);
 }
 
 int logging_init(LOG_LEVEL log_level)
@@ -131,6 +138,8 @@ void logging_vnc_redirect_info(const char *format, ...)
         return;
     }
 
+    pthread_mutex_lock(&g_log_mutex);
+
     now = time(NULL);
     strftime(time_str, sizeof(time_str), LOG_TIME_FMT, localtime(&now));
 
@@ -158,6 +167,8 @@ void logging_vnc_redirect_info(const char *format, ...)
 
     log_end:
     va_end(args);
+
+    pthread_mutex_unlock(&g_log_mutex);
 }
 
 void logging_vnc_redirect_error(const char *format, ...)
@@ -169,6 +180,8 @@ void logging_vnc_redirect_error(const char *format, ...)
     {
         return;
     }
+
+    pthread_mutex_lock(&g_log_mutex);
 
     now = time(NULL);
     strftime(time_str, sizeof(time_str), LOG_TIME_FMT, localtime(&now));
@@ -197,4 +210,6 @@ void logging_vnc_redirect_error(const char *format, ...)
 
     log_end:
     va_end(args);
+
+    pthread_mutex_unlock(&g_log_mutex);
 }
