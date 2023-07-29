@@ -98,8 +98,6 @@ static void SetAlphaCursor(rfbScreenInfoPtr screen,int mode)
 	c->cleanupMask=TRUE;
 }
 
-FILE *file_debug = NULL;
-
 rfbBool _rfbH264EncoderCallback(rfbClientPtr cl, char *buffer, size_t size)
 {
 	char *sps_head_buffer;
