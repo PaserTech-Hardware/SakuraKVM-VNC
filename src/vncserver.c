@@ -211,6 +211,7 @@ int vncserver_init(int argc, char *argv[])
     rfbScreenInfoPtr screen = rfbGetScreen(&argc, argv, 1920, 1080, 8, 3, 4);
     screen->frameBuffer = (char*)malloc(1920 * 1080 * 4);
     screen->desktopName = "SakuraKVM-VNC";
+	screen->alwaysShared = TRUE;
 
     SetXCursor2(screen);
     SetAlphaCursor(screen, 0);
