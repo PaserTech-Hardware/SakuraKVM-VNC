@@ -19,8 +19,8 @@ create_hid() {
     # create English locale
     mkdir strings/0x409
 
-    echo "SakuraKVM" > strings/0x409/manufacturer
-    echo "sakurakvm_input" > strings/0x409/product
+    echo "PaserTech SakuraKVM" > strings/0x409/manufacturer
+    echo "SakuraKVM USB Multi Function Point" > strings/0x409/product
     echo "SKVM0001" > strings/0x409/serialnumber
 
     # Create HID keyboard function
@@ -113,6 +113,11 @@ create_hid() {
     #  0xc0              // END_COLLECTION
     printf "\x05\x01\x09\x02\xa1\x01\x09\x01\xa1\x00\x05\x09\x19\x01\x29\x03\x15\x00\x25\x01\x95\x03\x75\x01\x81\x02\x95\x01\x75\x05\x81\x03\x05\x01\x09\x30\x09\x31\x35\x00\x46\xff\x7f\x15\x00\x26\xff\x7f\x65\x11\x55\x00\x75\x10\x95\x02\x81\x02\x09\x38\x15\xff\x25\x01\x35\x00\x45\x00\x75\x08\x95\x01\x81\x06\xc0\xc0" > functions/hid.1/report_desc
 
+    # Create USB Mass Storage function
+    mkdir functions/mass_storage.0
+    
+    echo "Sakura  KVM-Builtin Stor" > functions/mass_storage.0/lun.0/inquiry_string
+
     # Create configuration
     mkdir configs/c.1
     mkdir configs/c.1/strings/0x409
@@ -124,6 +129,9 @@ create_hid() {
     # Link HID functions to configuration
     ln -s functions/hid.0 configs/c.1
     ln -s functions/hid.1 configs/c.1
+
+    # Link USB Mass Storage function to configuration
+    ln -s functions/mass_storage.0 configs/c.1
 }
 
 connect_hid() {
