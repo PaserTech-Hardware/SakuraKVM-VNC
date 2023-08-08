@@ -183,11 +183,11 @@ int initH264Func(h264_func_t *h264_func, unsigned int width, unsigned int height
     h264_func->h264Param.nBitrate = 5*1024*1024;
     h264_func->h264Param.nFramerate = fps;
     h264_func->h264Param.nCodingMode = VENC_FRAME_CODING;
-    h264_func->h264Param.nMaxKeyInterval = 120;
+    h264_func->h264Param.nMaxKeyInterval = 15;
     h264_func->h264Param.sProfileLevel.nProfile = VENC_H264ProfileHigh;
     h264_func->h264Param.sProfileLevel.nLevel = VENC_H264Level51;
-    h264_func->h264Param.sQPRange.nMinqp = 10;
-    h264_func->h264Param.sQPRange.nMaxqp = 50;
+    h264_func->h264Param.sQPRange.nMinqp = 26;
+    h264_func->h264Param.sQPRange.nMaxqp = 51;
     h264_func->h264Param.bLongRefEnable = 0;
     h264_func->h264Param.nLongRefPoc = 0;
 
