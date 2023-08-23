@@ -40,6 +40,7 @@ we aimed to provide a simple, easy-to-use, and cross-platform solution for KVM o
          CXXCPP="cpp"
     $ sudo make CFLAGS="-w" # disable the warning due to allwinner's stupid strncpy problem
     $ sudo make install
+    $ sudo cp library/arm-linux-gnueabihf/* /usr/local/lib/
     $ sudo cp include/* /usr/include/
     $ sudo cp openmax/include/* /usr/include/
     ```
