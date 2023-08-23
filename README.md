@@ -38,7 +38,7 @@ we aimed to provide a simple, easy-to-use, and cross-platform solution for KVM o
          CPP="gcc"\
          CXX=g++\
          CXXCPP="cpp"
-    $ sudo make
+    $ sudo make CFLAGS="-w" # disable the warning due to allwinner's stupid strncpy problem
     $ sudo make install
     $ sudo cp include/* /usr/include/
     $ sudo cp openmax/include/* /usr/include/
