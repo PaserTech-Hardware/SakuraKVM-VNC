@@ -100,18 +100,25 @@ int usbhid_gadget_write_keyboard(const char *report)
             return 0;
         }
 
-        if(errno == EAGAIN || errno == ESHUTDOWN)
+        if(errno == EAGAIN)
         {
             retry_count--;
             LOGV("USB HID Gadget Keyboard write needs retry, left retry count: %d", retry_count);
             usleep(HID_REPORT_RETRY_INTERVAL_US);
             continue;
         }
+        if (errno == ESHUTDOWN) {
+            retry_count--;
+            usbhid_gadget_keyboard_close();
+            usbhid_gadget_keyboard_init();
+            usleep(HID_REPORT_RETRY_INTERVAL_US * 20);
+            continue;
+        }
 
         // other errors, just break and no need for retry
         break;
     }
-    
+
     LOGE("USB HID Gadget Keyboard write failed, errno: %d, %s", errno, strerror(errno));
     return -EIO;
 }
@@ -136,18 +143,25 @@ int usbhid_gadget_write_mouse(const char *report)
             return 0;
         }
 
-        if(errno == EAGAIN || errno == ESHUTDOWN)
+        if (errno == EAGAIN)
         {
             retry_count--;
             LOGV("USB HID Gadget Mouse write needs retry, left retry count: %d", retry_count);
             usleep(HID_REPORT_RETRY_INTERVAL_US);
             continue;
         }
+        if (errno == ESHUTDOWN) {
+            retry_count--;
+            usbhid_gadget_mouse_close();
+            usbhid_gadget_mouse_init();
+            usleep(HID_REPORT_RETRY_INTERVAL_US * 20);
+            continue;
+        }
 
         // other errors, just break and no need for retry
         break;
     }
-    
+
     LOGE("USB HID Gadget Mouse write failed, errno: %d, %s", errno, strerror(errno));
     return -EIO;
 }
